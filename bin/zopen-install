@@ -240,6 +240,7 @@ for installRepo in ${potentials}; do
   [ -e "${installRepo}" ] && fileinstall=true && break
 done
 
+mutexReq "zopen" "zopen"
 if ${downloadOnly}; then
   downloadDir="${PWD}"
   printDebug "Downloading pax to current directory '${downloadDir}'"
@@ -303,5 +304,5 @@ else
   processRepoInstallFile
 
 fi
-
+mutexFree "zopen"
 exit

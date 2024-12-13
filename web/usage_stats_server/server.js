@@ -141,15 +141,23 @@ async function checkDuplicateEntry(type, data) {
 async function insertData(type, data) {
   return new Promise((resolve, reject) => {
     let insertQuery, values;
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayTimestamp = today.getTime();
+
+    // Ensure the timestamp is not in the future
+    const adjustedTimestamp = data.timestamp > todayTimestamp ? todayTimestamp : data.timestamp;
+
     switch (type) {
       case 'removals':
         insertQuery = 'INSERT INTO removals (uuid, packagename, version, timestamp) VALUES (?, ?, ?, ?)';
-        values = [data.uuid, data.packagename, data.version, data.timestamp];
+        values = [data.uuid, data.packagename, data.version, adjustedTimestamp];
         break;
 
       case 'installs':
         insertQuery = 'INSERT INTO installs (uuid, packagename, version, isUpgrade, isBuildInstall, isRuntimeDependencyInstall, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?)';
-        values = [data.uuid, data.packagename, data.version, data.isUpgrade, data.isBuildInstall, data.isRuntimeDependencyInstall, data.timestamp];
+        values = [data.uuid, data.packagename, data.version, data.isUpgrade, data.isBuildInstall, data.isRuntimeDependencyInstall, adjustedTimestamp];
         break;
 
       case 'profiles':
@@ -228,7 +236,7 @@ async function getInstallsByPort(port) {
 
           const netInstalls = installs.map((install) => ({
             timestamp: install.timestamp,
-            installs: install.installs - botInstalls - buildInstalls,
+            installs: install.installs,
             installsWithBuild: install.installs - botInstalls,
             installsWithBuildAndBot: install.installs,
           }));
@@ -267,7 +275,7 @@ async function getRankedInstalls() {
           SELECT i.packagename, COUNT(*) as installs
           FROM installs i
           LEFT JOIN profiles p ON i.uuid = p.uuid
-	  WHERE p.isbot is not true
+	  WHERE IFNULL(p.isbot, 0) != 'true' and i.isBuildInstall != true
           GROUP BY i.packagename
           ORDER BY installs DESC
         `, async (err, installs) => {
@@ -339,14 +347,14 @@ async function getCountByCriteria(tableName, columnName, criteria, port) {
           SELECT i.packagename, COUNT(*) as count
           FROM ${tableName} i
           LEFT JOIN profiles p ON i.uuid = p.uuid
-          WHERE IFNULL(p.isbot, 0) = ?
+          WHERE IFNULL(p.isbot, 0) = 'true'
           GROUP BY i.packagename
         `;
       } else {
         query = `SELECT packagename, COUNT(*) as count FROM ${tableName} WHERE ${columnName} = ? GROUP BY packagename`;
+      params = [criteria];
       }
 
-      params = [criteria];
     }
 
     db.all(query, params, (err, counts) => {

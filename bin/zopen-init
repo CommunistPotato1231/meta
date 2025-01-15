@@ -109,7 +109,7 @@ PKG_DIR="packages"
 CURL_PAX_LOCATION="${PKG_DIR}/${CURL_PAX}"
 JQ_PAX_LOCATION="${PKG_DIR}/${JQ_PAX}"
 GPG_PAX_LOCATION="${PKG_DIR}/${GPG_PAX}"
-PINENTRY_PAX_LOCATION="${PKG_DIR}/${JQ_PAX}"
+PINENTRY_PAX_LOCATION="${PKG_DIR}/${PINENTRY_PAX}"
 
 verbose=false
 isHostIBM=false
@@ -299,6 +299,12 @@ init()
   if ! promptYesOrNo "Do you want to continue?" ${yesToPrompts}; then
     printInfo "Exiting..."
     exit 0
+  fi
+
+  if ! ${yesToPrompts} && [ -z "${OVERRIDE_ZOS_TOOLS}" ]; then
+    if promptYesOrNo "Should zopen tools default to overriding the z/OS /bin tools (e.g. man, find, grep)?" ${yesToPrompts}; then
+      OVERRIDE_ZOS_TOOLS=true
+    fi
   fi
 
   configFile="${rootfs}/etc/zopen-config"
@@ -583,7 +589,7 @@ installPrereqs()
 {
   printHeader "Installing zopen pre-requisites"
   # Comma-separated list of pax locations
-  PAX_LOCATIONS="$CURL_PAX_LOCATION,$JQ_PAX_LOCATION,${GPG_PAX_LOCATION},${PINENTRY_PAX_LOCATION}"
+  PAX_LOCATIONS="$CURL_PAX_LOCATION,$JQ_PAX_LOCATION,${PINENTRY_PAX_LOCATION},${GPG_PAX_LOCATION}"
 
   echo "$PAX_LOCATIONS" | tr ',' '\n' | while read -r pax; do
     printVerbose "- Check for shipped ${pax}"
@@ -610,7 +616,7 @@ installPrereqs()
  done
 
   # Sourcing the environment from within the actual directories
-  for tool in "curl" "jq" "gnupg" "pinentry"; do
+  for tool in "curl" "jq" "pinentry "gnupg""; do
      printVerbose "Sourcing environment to trigger any setup required for ${tool}"
 
      tooldir=$(ls "${rootfs}/boot" | grep ${tool} | head -1)
@@ -631,10 +637,10 @@ updateBootstrappedTools() {
     installOptions="${installOptions} --bypass-prereq-checks";
   fi
   if ${refresh}; then
-    ${MYDIR}/zopen-install ${installOptions} -y curl jq gpg pinentry
+    ${MYDIR}/zopen-install ${installOptions} -y curl jq pinentry gpg 
     toolInstall=$?
   else
-    ${MYDIR}/zopen-install ${installOptions} -y curl jq meta gpg pinentry
+    ${MYDIR}/zopen-install ${installOptions} -y curl jq pinentry gpg meta
     toolInstall=$?
   fi
   [ ${toolInstall} -ne 0 ] && printError "Unable to install curl, jq, gpg, pinentry and/or meta; see previous errors and retry the initilisation using the '--re-init' parameter"
@@ -718,7 +724,6 @@ generateFileSystem
 generateJsonConfiguration
 generateDefaultRepository
 generateAnalyticsConfiguration
-! ${refresh} && updateBootstrappedTools
 [ -e "${ZOPEN_ROOTFS}/var/lib/zopen/packageDB.json" ] || updatePackageDB
 updateBootstrappedTools
 deinit

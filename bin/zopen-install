@@ -265,4 +265,4 @@ else
   printInfo "Installation complete."
 fi
 mutexFree "zopen"
-exit
+exit 0

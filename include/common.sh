@@ -2026,7 +2026,9 @@ processRepoInstallFile(){
     installFile="${installurl##*/}"
     if [ ! "${installFile%.zos.pax.Z}" = "${installFile}" ]; then
       # Found zos.pax.Z format
-      installFromPax "${installFile}"
+      if ! installFromPax "${installFile}"; then
+        printError "Package installation terminated"
+      fi
     else
       printError "Unrecognised install file format"
     fi
@@ -2069,7 +2071,7 @@ extractMetadataFromPax()
     if ! details=$(pax -rf "$1" -s "%[^/]*/%/tmp/%" '*/package.json'); then
       printSoftError "Could not extract package metadata from file '$1'."
       [ -n "${details}" ] && printSoftError "Details: ${details}"
-      exit 8
+      return 1
     else
       echo "/tmp/package.json"
     fi
@@ -2083,7 +2085,9 @@ installFromPax()
   pax="${downloadToDir}/$1"
   printDebug "Installing from '${pax}'"
 
-  metadatafile=$(extractMetadataFromPax "${pax}")
+  if ! metadatafile=$(extractMetadataFromPax "${pax}"); then
+    return 1
+  fi
   # Ideally we would use the following, 
   #  name=$(jq --raw-output '.product.name' "${metadatafile}") 
   # but name does not always map to the actual repo package name at present!

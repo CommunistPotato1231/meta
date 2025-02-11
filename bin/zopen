@@ -35,7 +35,9 @@ Command:
   config            change zopen runtime environment settings
   generate          generates a new zopen project
   init              initializes a zopen environment at the specified location
+  refresh           refreshes your zopen environment and zopen-config file
   install           installs one or more zopen community packages
+  info              displays detailed information about a package
   list              lists information about zopen community packages
   query             list local or remote info about zopen community packages
   remove            removes installed zopen community packages
@@ -53,6 +55,7 @@ Examples:
   zopen upgrade -y  upgrade all installed packages to the latest release,
                     without prompting
   zopen alt bash    list installed alternative bash packages
+  zopen info vim    displays details information about the installed vim package
 
 SEE ALSO:
   zopen-alt(1)
@@ -63,6 +66,7 @@ SEE ALSO:
   zopen-generate(1)
   zopen-init(1)
   zopen-install(1)
+  zopen-info(1)
   zopen-query(1)
   zopen-remove(1)
   zopen-update-cacert(1)
@@ -84,13 +88,18 @@ version=false
 for arg in $*; do
   case "${arg}" in
     "alt"|"audit"|"build"|"clean"|"generate"|"init"|"install"|\
-    "list"|"query"|"remove"|"update-cacert"|"upgrade")
+    "list"|"query"|"remove"|"update-cacert"|"upgrade"|"info")
       subcmd="zopen-${arg}"
+      ;;
+    "refresh")
+      subcmd='zopen-init'
+      subopts="${subopts} --refresh"
       ;;
     "config")
       subcmd="zopen-${arg}-helper"
       ;;
     "--version")
+      subcmd='zopen-version'
       version=true
       ;;
     "help" | "--help" | "-?")
@@ -104,7 +113,7 @@ for arg in $*; do
 done
 
 if [ -z "${subcmd}" ]; then
-  if ${help}; then
+  if ${help} || [ -z "${subopts}" -a -z "${subcmd}" ]; then
     printHelp
     exit 0
   elif ${version}; then
@@ -124,7 +133,6 @@ if ${version}; then
   else
     subopts="${subcmd}"
   fi
-  subcmd='zopen-version'
 fi
 
 ${subcmd} ${subopts}

@@ -52,7 +52,12 @@ printPackageInfo() {
         exit 1
     fi
 
-    remote_data=$(jq -c ".release_data.\"${package}\"[0]" "${JSON_CACHE}")
+    tagged=$(echo "${package}" | cut -s -d '%' -f 2)
+    if [ -n "${tagged}" ]; then
+        remote_data=$(jq -c ".release_data.\"${base_package}\"[] | select(.tag_name==\"${tagged}\")" "${JSON_CACHE}")
+    else
+        remote_data=$(jq -c ".release_data.\"${base_package}\"[0]" "${JSON_CACHE}")
+    fi
 
     if [ -z "${remote_data}" ] || [ "${remote_data}" = "null" ]; then
         printError "Package '${package}' not found in remote repository."
